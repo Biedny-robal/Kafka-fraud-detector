@@ -1,4 +1,6 @@
 import json
+import os
+from dotenv import load_dotenv
 import math
 from pyflink.common import Configuration
 from pyflink.common.serialization import SimpleStringSchema
@@ -16,7 +18,8 @@ from pyflink.datastream.connectors.kafka import (
 # KONFIGURACJA
 # ============================================================================
 
-JAR_PATH = "file:///home/andrzejek123pl/Downloads/flink-2.0.2/opt/flink-sql-connector-kafka-4.0.1-2.0.jar"
+load_dotenv()
+JAR_PATH = os.getenv('JAR_PATH')
 
 KAFKA_BROKER = "localhost:9092"
 TOPIC_IN = "transactions"

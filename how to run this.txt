@@ -1,3 +1,9 @@
++ do alarm_analysis trzeba doinstalować kafka-python i matplotlib,
+  do fraud_detector python-dotenv
+
+dodać w głównym katalogu plik .env z JAR_PATH=ścieżkaDoFlinkSqlConnectorKafka
+
+
 super:
 sudo setenforce 0 // wymagane, zeby poszlo u mnie na linuxie
 odpalić przez sudo systemctl start kafka
