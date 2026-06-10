@@ -19,3 +19,13 @@ Procedura startowa:
 pip install --upgrade pip setuptools wheel
 pip install apache-flink==2.0.2
 4. odpalanie: python fraud_detector.py
+założenia do programu - uznaje jako scam transakcje, w których:
+1. jedna karta została użyta co najmniej 2 razy w 5 minut
+2. jedna karta została użyta w dwóch miejscach oddalonych od siebie tak, że jadąć ciągiem 30m/s by się tam nie dotarło
+3. karta została użyta w godzinach nocnych (między 1 a 5)
+4. transakcja jest na kwotę odbiegającą o 3 standardowe odchylenia od średniej globalnej
+zastrzeżenie - jest z łapy podawana ścieżka do connectora sql - jak odpalamy u siebie trzeba to podmienić
+dzięki temu jak sb wejdziemy na kafdropa, powinny nam się pojawić alarmy
+w końcu - można odpalić generowanie wykresów na podstawie alarmów. robimy to wpisując python alarm_analysis.py
+tutaj podobnie jak testowy consumer kafki, trzeba mu przerwać ręcznie i wtedy wygeneruje wykresy
+wykresy pojawią się w alarm_output, wrzuciłem przykładowe
