@@ -122,7 +122,6 @@ def visualize(alarms, output_dir='./alarm_output'):
     days = []
     lats = []
     lons = []
-    speeds = []                # prędkości z computed (tylko gdy jest)
     time_diffs = []            # różnice czasu [s]
     distances = []             # dystanse [m]
     users = []
@@ -154,14 +153,13 @@ def visualize(alarms, output_dir='./alarm_output'):
         prev = a.get('previous_transaction')
         if prev and prev.get('computed'):
             comp = prev['computed']
-            speeds.append(comp.get('speed_mps', 0))
             time_diffs.append(comp.get('time_diff_sec', 0))
             distances.append(comp.get('distance_m', 0))
             prev_gps = prev.get('gps', {})
             prev_lats.append(prev_gps.get('latitude', 0))
             prev_lons.append(prev_gps.get('longitude', 0))
 
-    # ----------- RAPORT GŁÓWNY (6x3 = 18 wykresów) -----------
+    # RAPORT 
 
     fig = plt.figure(figsize=(30, 42))
     gs = GridSpec(7, 3, figure=fig, hspace=0.4, wspace=0.3)
@@ -207,7 +205,7 @@ def visualize(alarms, output_dir='./alarm_output'):
 
     # --- 4. Rozkład kwot w alarmach ---
     ax = fig.add_subplot(gs[1, 0])
-    ax.hist(amounts, bins=50, color='#e74c3c', alpha=0.7, edgecolor='white')
+    ax.hist(amounts, range=(0,max(amounts)), bins=50, color='#e74c3c', alpha=0.8, edgecolor='white')
     ax.axvline(np.mean(amounts), color='black', linestyle='--',
                label=f'Średnia: {np.mean(amounts):.1f}')
     ax.axvline(np.median(amounts), color='blue', linestyle=':',
@@ -258,68 +256,20 @@ def visualize(alarms, output_dir='./alarm_output'):
         ax.set_xticks(range(0, len(sorted_days), step))
         ax.set_xticklabels([sorted_days[i][5:] for i in range(0, len(sorted_days), step)], rotation=45)
 
-    # --- 8. Skumulowane alarmy w czasie ---
-    ax = fig.add_subplot(gs[2, 2])
-    if days:
-        cumulative = list(range(1, len(alarms) + 1))
-        ax.plot(cumulative, color='#e74c3c', linewidth=1.5)
-        ax.set_title('Alarmy skumulowanie', fontweight='bold')
-        ax.set_xlabel('Nr alarmu')
-        ax.set_ylabel('Suma')
-        ax.grid(True, alpha=0.3)
-
-    # --- 9. Mapa GPS alarmów ---
-    ax = fig.add_subplot(gs[3, 0:2])
-    ax.scatter(lons, lats, s=10, alpha=0.4, color='#e74c3c', label='Alarm (bieżąca TX)')
-    if prev_lats:
-        ax.scatter(prev_lons, prev_lats, s=10, alpha=0.3, color='#2980b9', marker='x',
-                   label='Poprzednia TX')
-        # Linie łączące pary (sample max 200 żeby nie zaśmiecić)
-        sample_n = min(200, len(prev_lats))
-        for i in range(sample_n):
-            ax.plot([prev_lons[i], lons[i]], [prev_lats[i], lats[i]],
-                    color='gray', alpha=0.1, linewidth=0.5)
-    ax.set_title('Mapa lokalizacji alarmów (bieżąca vs poprzednia TX)', fontweight='bold')
-    ax.set_xlabel('Długość geograficzna')
-    ax.set_ylabel('Szerokość geograficzna')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    # --- 10. Mapa — zoom Polska ---
+    # --- 8. Mapa — zoom Polska ---
     ax = fig.add_subplot(gs[3, 2])
-    pl_lats = [la for la, lo in zip(lats, lons) if 49 <= la <= 55 and 14 <= lo <= 24.5]
-    pl_lons = [lo for la, lo in zip(lats, lons) if 49 <= la <= 55 and 14 <= lo <= 24.5]
+    pl_lats = [la for la, lo in zip(lats, lons) if 48 <= la <= 56 and 13 <= lo <= 25.5]
+    pl_lons = [lo for la, lo in zip(lats, lons) if 48 <= la <= 56 and 13 <= lo <= 25.5]
     ax.scatter(pl_lons, pl_lats, s=15, alpha=0.5, color='#e74c3c')
-    ax.set_xlim(14, 24.5)
-    ax.set_ylim(49, 55)
+    ax.set_xlim(13, 25.5)
+    ax.set_ylim(48, 56)
     ax.set_title('Alarmy — Polska', fontweight='bold')
     ax.set_xlabel('Długość')
     ax.set_ylabel('Szerokość')
     ax.grid(True, alpha=0.3)
 
-    # --- 11. Rozkład prędkości (speed anomaly) ---
-    ax = fig.add_subplot(gs[4, 0])
-    if speeds:
-        speed_arr = np.array(speeds)
-        # Pokaż tylko te > 30 m/s (flagowane)
-        flagged_speeds = speed_arr[speed_arr > 30]
-        if len(flagged_speeds) > 0:
-            ax.hist(flagged_speeds, bins=40, color='#f39c12', alpha=0.7, edgecolor='white')
-            ax.axvline(30, color='red', linestyle='--', linewidth=2, label='Próg: 30 m/s')
-            ax.axvline(np.median(flagged_speeds), color='black', linestyle=':',
-                       label=f'Mediana: {np.median(flagged_speeds):.0f} m/s')
-            ax.set_title('Rozkład prędkości (anomalie speed)', fontweight='bold')
-            ax.set_xlabel('Prędkość [m/s]')
-            ax.set_ylabel('Liczba')
-            ax.legend()
-        else:
-            ax.text(0.5, 0.5, 'Brak anomalii speed', ha='center', va='center')
-    else:
-        ax.text(0.5, 0.5, 'Brak danych o prędkości', ha='center', va='center')
-    ax.set_title('Prędkości wykryte jako anomalia', fontweight='bold')
-
-    # --- 12. Rozkład różnic czasu (frequency anomaly) ---
-    ax = fig.add_subplot(gs[4, 1])
+    # --- 9. Rozkład różnic czasu (frequency anomaly) ---
+    ax = fig.add_subplot(gs[2, 2])
     if time_diffs:
         freq_diffs = [t for t in time_diffs if 0 < t < 300]
         if freq_diffs:
@@ -334,23 +284,11 @@ def visualize(alarms, output_dir='./alarm_output'):
             ax.text(0.5, 0.5, 'Brak anomalii frequency', ha='center', va='center')
     else:
         ax.text(0.5, 0.5, 'Brak danych', ha='center', va='center')
-    ax.set_title('Czas między TX (anomalie frequency)', fontweight='bold')
+    ax.set_title('Czas między TX (częstotliwość anomalii)', fontweight='bold')
 
-    # --- 13. Rozkład dystansów ---
-    ax = fig.add_subplot(gs[4, 2])
-    if distances:
-        dist_km = [d / 1000 for d in distances if d > 0]
-        if dist_km:
-            ax.hist(dist_km, bins=40, color='#f39c12', alpha=0.7, edgecolor='white')
-            ax.axvline(np.median(dist_km), color='black', linestyle=':',
-                       label=f'Mediana: {np.median(dist_km):.0f} km')
-            ax.set_xlabel('Dystans [km]')
-            ax.set_ylabel('Liczba')
-            ax.legend()
-    ax.set_title('Dystans między kolejnymi TX (alarmy)', fontweight='bold')
 
-    # --- 14. Top 15 najczęściej alarmowanych kart ---
-    ax = fig.add_subplot(gs[5, 0])
+    # --- 10. Top 15 najczęściej alarmowanych kart ---
+    ax = fig.add_subplot(gs[3, 0])
     card_counts = defaultdict(int)
     for c in cards:
         card_counts[c] += 1
@@ -363,8 +301,8 @@ def visualize(alarms, output_dir='./alarm_output'):
         ax.set_xlabel('Liczba alarmów')
         ax.invert_yaxis()
 
-    # --- 15. Top 15 najczęściej alarmowanych użytkowników ---
-    ax = fig.add_subplot(gs[5, 1])
+    # --- 11. Top 15 najczęściej alarmowanych użytkowników ---
+    ax = fig.add_subplot(gs[3, 1])
     user_counts = defaultdict(int)
     for u in users:
         user_counts[u] += 1
@@ -377,19 +315,8 @@ def visualize(alarms, output_dir='./alarm_output'):
         ax.set_xlabel('Liczba alarmów')
         ax.invert_yaxis()
 
-    # --- 16. Ile alarmów per użytkownik (histogram) ---
-    ax = fig.add_subplot(gs[5, 2])
-    user_alarm_counts = list(user_counts.values())
-    ax.hist(user_alarm_counts, bins=30, color='#8e44ad', alpha=0.7, edgecolor='white')
-    ax.axvline(np.mean(user_alarm_counts), color='red', linestyle='--',
-               label=f'Średnia: {np.mean(user_alarm_counts):.1f}')
-    ax.set_title('Rozkład: alarmy per użytkownik', fontweight='bold')
-    ax.set_xlabel('Liczba alarmów')
-    ax.set_ylabel('Liczba użytkowników')
-    ax.legend()
-
-    # --- 17. Heatmapa: godzina vs typ anomalii ---
-    ax = fig.add_subplot(gs[6, 0:2])
+    # --- 12. Heatmapa: godzina vs typ anomalii ---
+    ax = fig.add_subplot(gs[4, 0:2])
     reason_types = sorted(set(reasons_all))
     heatmap_data = np.zeros((len(reason_types), 24))
     for a in alarms:
@@ -409,8 +336,8 @@ def visualize(alarms, output_dir='./alarm_output'):
     ax.set_title('Heatmapa: typ anomalii vs godzina', fontweight='bold')
     plt.colorbar(im, ax=ax, label='Liczba alarmów')
 
-    # --- 18. Statystyki tekstowe ---
-    ax = fig.add_subplot(gs[6, 2])
+    # --- 13. Statystyki tekstowe ---
+    ax = fig.add_subplot(gs[4, 2])
     ax.axis('off')
 
     unique_users = len(set(users))
@@ -432,18 +359,8 @@ def visualize(alarms, output_dir='./alarm_output'):
         f"  Min:           {np.min(amounts):>10.2f} PLN\n"
         f"  Max:           {np.max(amounts):>10.2f} PLN\n\n"
         f"{'─'*40}\n"
-        f"  PRĘDKOŚCI (anomalie speed)\n"
     )
-    if speeds:
-        flagged_sp = [s for s in speeds if s > 30]
-        if flagged_sp:
-            stats_text += (
-                f"  Średnia:       {np.mean(flagged_sp):>10.1f} m/s\n"
-                f"  Max:           {np.max(flagged_sp):>10.1f} m/s\n"
-                f"  Liczba:        {len(flagged_sp):>10}\n"
-            )
-    else:
-        stats_text += "  Brak danych\n"
+
 
     stats_text += (
         f"\n{'─'*40}\n"
@@ -461,168 +378,7 @@ def visualize(alarms, output_dir='./alarm_output'):
     path = os.path.join(output_dir, 'alarm_report.png')
     plt.savefig(path, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close(fig)
-    print(f"[Vis] Raport główny zapisany: {path}")
-
-    # ----------- RAPORT DODATKOWY: weryfikacja poprawności -----------
-    generate_verification_report(alarms, output_dir)
-
-
-def generate_verification_report(alarms, output_dir):
-    """
-    Raport weryfikacyjny — pokazuje dowody poprawności detekcji:
-    - Czy card_id się zgadza między TX
-    - Rozkład time_diff dla frequency
-    - Rozkład speed dla speed
-    - Godziny dla night_hour
-    - Kwoty vs próg 3σ dla amount_outlier
-    """
-
-    fig, axes = plt.subplots(2, 3, figsize=(22, 14))
-    fig.suptitle('Raport weryfikacji poprawności detekcji', fontsize=14, fontweight='bold')
-
-    # 1. Weryfikacja card_id — czy current.card_id == previous.card_id
-    ax = axes[0, 0]
-    match_count = 0
-    mismatch_count = 0
-    no_prev_count = 0
-    for a in alarms:
-        prev = a.get('previous_transaction')
-        if prev:
-            if prev.get('card_id') == a.get('card_id'):
-                match_count += 1
-            else:
-                mismatch_count += 1
-        else:
-            no_prev_count += 1
-
-    ax.bar(['Zgodne\ncard_id', 'Niezgodne\ncard_id', 'Brak\npoprzedniej'],
-           [match_count, mismatch_count, no_prev_count],
-           color=['#27ae60', '#e74c3c', '#95a5a6'])
-    ax.set_title('Weryfikacja: card_id bieżąca == poprzednia', fontweight='bold')
-    ax.set_ylabel('Liczba alarmów')
-    for i, v in enumerate([match_count, mismatch_count, no_prev_count]):
-        ax.text(i, v + 1, str(v), ha='center', fontweight='bold')
-
-    # 2. Frequency: time_diff < 300s
-    ax = axes[0, 1]
-    freq_alarms = [a for a in alarms if 'frequency' in a.get('reasons', [])]
-    freq_diffs = []
-    for a in freq_alarms:
-        prev = a.get('previous_transaction')
-        if prev and prev.get('computed'):
-            freq_diffs.append(prev['computed'].get('time_diff_sec', 0))
-    if freq_diffs:
-        ax.hist(freq_diffs, bins=30, color='#e74c3c', alpha=0.7, edgecolor='white')
-        ax.axvline(300, color='black', linewidth=2, linestyle='--', label='Próg 300s')
-        violations = sum(1 for t in freq_diffs if t >= 300)
-        ax.set_xlabel('Δt [sekundy]')
-        ax.set_ylabel('Liczba')
-        ax.set_title(f'Frequency: Δt < 300s\n(fałszywe powyżej progu: {violations})', fontweight='bold')
-        ax.legend()
-    else:
-        ax.text(0.5, 0.5, 'Brak alarmów frequency', ha='center', va='center')
-        ax.set_title('Frequency: Δt', fontweight='bold')
-
-    # 3. Speed: speed > 30 m/s
-    ax = axes[0, 2]
-    speed_alarms = [a for a in alarms if 'speed' in a.get('reasons', [])]
-    alarm_speeds = []
-    for a in speed_alarms:
-        prev = a.get('previous_transaction')
-        if prev and prev.get('computed'):
-            alarm_speeds.append(prev['computed'].get('speed_mps', 0))
-    if alarm_speeds:
-        ax.hist(alarm_speeds, bins=40, color='#f39c12', alpha=0.7, edgecolor='white')
-        ax.axvline(30, color='black', linewidth=2, linestyle='--', label='Próg 30 m/s')
-        violations = sum(1 for s in alarm_speeds if s <= 30)
-        ax.set_xlabel('Prędkość [m/s]')
-        ax.set_ylabel('Liczba')
-        ax.set_title(f'Speed: v > 30 m/s\n(fałszywe poniżej progu: {violations})', fontweight='bold')
-        ax.legend()
-    else:
-        ax.text(0.5, 0.5, 'Brak alarmów speed', ha='center', va='center')
-        ax.set_title('Speed: prędkość', fontweight='bold')
-
-    # 4. Night hour: godzina 1-5
-    ax = axes[1, 0]
-    night_alarms = [a for a in alarms if 'night_hour' in a.get('reasons', [])]
-    night_hours = []
-    for a in night_alarms:
-        try:
-            h = datetime.fromisoformat(a['timestamp']).hour
-            night_hours.append(h)
-        except:
-            pass
-    if night_hours:
-        ax.hist(night_hours, bins=24, range=(0, 24), color='#8e44ad', alpha=0.7, edgecolor='white')
-        ax.axvspan(1, 5, alpha=0.2, color='red', label='Strefa 1:00-5:00')
-        violations = sum(1 for h in night_hours if h < 1 or h >= 5)
-        ax.set_xlabel('Godzina')
-        ax.set_ylabel('Liczba')
-        ax.set_title(f'Night hour: h ∈ [1,5)\n(fałszywe poza strefą: {violations})', fontweight='bold')
-        ax.set_xticks(range(0, 24, 2))
-        ax.legend()
-    else:
-        ax.text(0.5, 0.5, 'Brak alarmów night_hour', ha='center', va='center')
-        ax.set_title('Night hour', fontweight='bold')
-
-    # 5. Amount outlier: kwota > mean + 3*std
-    ax = axes[1, 1]
-    outlier_alarms = [a for a in alarms if 'amount_outlier' in a.get('reasons', [])]
-    outlier_amounts = []
-    outlier_thresholds = []
-    for a in outlier_alarms:
-        outlier_amounts.append(a.get('amount', 0))
-        stats = a.get('current_stats', {})
-        mean = stats.get('global_mean', 0)
-        std = stats.get('global_std', 0)
-        outlier_thresholds.append(mean + 3 * std)
-    if outlier_amounts:
-        ax.scatter(range(len(outlier_amounts)), outlier_amounts, s=10, alpha=0.6,
-                   color='#2980b9', label='Kwota alarmu')
-        ax.scatter(range(len(outlier_thresholds)), outlier_thresholds, s=5, alpha=0.4,
-                   color='red', label='Próg (μ+3σ)')
-        violations = sum(1 for a, t in zip(outlier_amounts, outlier_thresholds) if a <= t)
-        ax.set_xlabel('Nr alarmu')
-        ax.set_ylabel('Kwota [PLN]')
-        ax.set_title(f'Amount outlier: kwota > μ+3σ\n(fałszywe poniżej progu: {violations})', fontweight='bold')
-        ax.legend()
-    else:
-        ax.text(0.5, 0.5, 'Brak alarmów amount_outlier', ha='center', va='center')
-        ax.set_title('Amount outlier', fontweight='bold')
-
-    # 6. Podsumowanie weryfikacji
-    ax = axes[1, 2]
-    ax.axis('off')
-    total = len(alarms)
-    summary = (
-        f"{'═'*36}\n"
-        f"  WERYFIKACJA POPRAWNOŚCI\n"
-        f"{'═'*36}\n\n"
-        f"  Łącznie alarmów:     {total}\n\n"
-        f"  Card ID:\n"
-        f"    Zgodne:            {match_count}\n"
-        f"    Niezgodne:         {mismatch_count}\n"
-        f"    Bez poprzedniej:   {no_prev_count}\n\n"
-        f"  Frequency ({len(freq_alarms)} alarmów):\n"
-        f"    Wszystkie Δt<300s: {'TAK ✓' if freq_diffs and all(t < 300 for t in freq_diffs) else 'NIE ✗' if freq_diffs else 'brak danych'}\n\n"
-        f"  Speed ({len(speed_alarms)} alarmów):\n"
-        f"    Wszystkie v>30m/s: {'TAK ✓' if alarm_speeds and all(s > 30 for s in alarm_speeds) else 'NIE ✗' if alarm_speeds else 'brak danych'}\n\n"
-        f"  Night hour ({len(night_alarms)} alarmów):\n"
-        f"    Wszystkie h∈[1,5): {'TAK ✓' if night_hours and all(1 <= h < 5 for h in night_hours) else 'NIE ✗' if night_hours else 'brak danych'}\n\n"
-        f"  Amount outlier ({len(outlier_alarms)} alarmów):\n"
-        f"    Wszystkie > próg:  {'TAK ✓' if outlier_amounts and all(a > t for a, t in zip(outlier_amounts, outlier_thresholds)) else 'NIE ✗' if outlier_amounts else 'brak danych'}\n"
-    )
-    ax.text(0.02, 0.98, summary, transform=ax.transAxes, fontsize=10,
-            verticalalignment='top', fontfamily='monospace',
-            bbox=dict(boxstyle='round', facecolor='#eafaf1', alpha=0.9))
-
-    plt.tight_layout()
-    path = os.path.join(output_dir, 'alarm_verification.png')
-    plt.savefig(path, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close(fig)
-    print(f"[Vis] Raport weryfikacji zapisany: {path}")
-
+    print(f"[Vis] Raport zapisany: {path}")
 
 # ============================================================================
 # MAIN
