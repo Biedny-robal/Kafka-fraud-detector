@@ -2,6 +2,7 @@ import json
 import random
 import numpy as np
 import time
+import argparse
 from kafka import KafkaProducer
 from datetime import datetime, timedelta
 import uuid
@@ -540,6 +541,7 @@ def generate_transactions(user_data_file='user_data.json', simulation_days=30, o
     print("\nScam breakdown:")
     for scam_type, count in sorted(scam_counts.items()):
         print(f"  {scam_type}: {count} transactions")
+    return all_transactions
 
 # Messages will be serialized as JSON 
 def serializer(message):
@@ -564,8 +566,7 @@ if __name__ == '__main__':
     transactions = generate_transactions(
         user_data_file='user_data.json',
         simulation_days=30,
-        output_file='transactions.json',
-        write_to_file=args.write_to_file
+        output_file='transactions.json'
     )
 
     # If --write_to_file is NOT passed, stream them sequentially to Kafka

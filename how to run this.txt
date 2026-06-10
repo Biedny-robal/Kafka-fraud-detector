@@ -1,0 +1,11 @@
+super:
+sudo setenforce 0 // wymagane, zeby poszlo u mnie na linuxie
+odpalić przez sudo systemctl start kafka
+spada z rowerka, trzeba zapdejtować cluster w pliku meta.properties w oparciu o oczekiwaną wartość z pliku kafka.log
+po zapdejtowaniu - odpalić ponownie
+sudo systemctl status kafka - powinno być git
+odpalić kafdropa takim zaklęciem (trzeba być w folderze, gdzie ten kafdrop rezyduje). po zaklęciu - na localhost:9000 sie dzieje
+java --add-opens=java.base/sun.nio.ch=ALL-UNNAMED -jar kafdrop-3.29.0.jar --kafka.brokerConnect=localhost:9092
+zmiany zostały wprowadzone w transakcjach
+żeby odpalić: python Transaction_generator.py 
+testowy konsument. jest trochę średni, ale nie ma czasu na lepszego. odpala się go python test_kafka_consumer.py ; mówi ile transakcji wczytał i działa w kółko, trzeba go zatrzymać ctrl + c, wtedy wygeneruje output z analizą do folderu
