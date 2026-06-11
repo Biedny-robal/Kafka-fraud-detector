@@ -45,17 +45,13 @@ import matplotlib.patches as mpatches
 from matplotlib.gridspec import GridSpec
 from kafka import KafkaConsumer
 
-# ============================================================================
-# KONFIGURACJA
-# ============================================================================
-
 KAFKA_BROKER = 'localhost:9092'
 TOPIC = 'alarms'
 GROUP_ID = 'alarm-monitor-group'
 
-# ============================================================================
+
 # KONSUMENT + ZBIERANIE DANYCH
-# ============================================================================
+
 
 def consume_alarms(timeout_sec=120):
     """Konsumuje alarmy z Kafki i zwraca listę."""
@@ -100,9 +96,9 @@ def consume_alarms(timeout_sec=120):
     return alarms
 
 
-# ============================================================================
+
 # WIZUALIZACJA
-# ============================================================================
+
 
 def visualize(alarms, output_dir='./alarm_output'):
     """Generuje kompleksowe wykresy na podstawie zebranych alarmów."""
@@ -380,9 +376,8 @@ def visualize(alarms, output_dir='./alarm_output'):
     plt.close(fig)
     print(f"[Vis] Raport zapisany: {path}")
 
-# ============================================================================
+
 # MAIN
-# ============================================================================
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Monitor alarmów — konsument Kafka + wizualizacja')

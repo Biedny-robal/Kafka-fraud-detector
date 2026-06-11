@@ -14,10 +14,8 @@ from pyflink.datastream.connectors.kafka import (
     KafkaSource,
 )
 
-# ============================================================================
-# KONFIGURACJA
-# ============================================================================
 
+# KONFIGURACJA
 load_dotenv()
 JAR_PATH = os.getenv('JAR_PATH')
 
@@ -31,19 +29,13 @@ NIGHT_START = 1
 NIGHT_END = 5
 STD_MULTIPLIER = 3
 
-# ============================================================================
-# STAN (parallelism=1)
-# Klucz słownika = pełny card_id hex, np. "6B46B2F1A3D8E09C"
-# ============================================================================
 
 last_tx = {}
 stats_count = 0
 stats_mean = 0.0
 stats_m2 = 0.0
 
-# ============================================================================
 # POMOCNICZE
-# ============================================================================
 
 def haversine_meters(lat1, lon1, lat2, lon2):
     R = 6_371_000
@@ -60,9 +52,8 @@ def parse_timestamp(ts_str):
     return dt.timestamp(), dt.hour
 
 
-# ============================================================================
+
 # DETEKCJA
-# ============================================================================
 
 def detect_fraud(record_str: str):
     global last_tx, stats_count, stats_mean, stats_m2
@@ -83,7 +74,6 @@ def detect_fraud(record_str: str):
     prev_tx_info = None
 
     # A) Częstotliwość & B) Prędkość
-    # Szukamy last_tx[card_id] — dopasowanie po PEŁNYM identyfikatorze karty
     if card_id in last_tx:
         prev = last_tx[card_id]
         dt = epoch - prev["ts"]
@@ -97,7 +87,7 @@ def detect_fraud(record_str: str):
             reasons.append("speed")
 
         prev_tx_info = {
-            "card_id": prev["card_id"],         # pełny hex, np. "6B46B2F1A3D8E09C"
+            "card_id": prev["card_id"],         
             "user_id": prev["user_id"],
             "timestamp": prev["timestamp"],
             "gps": {"latitude": prev["lat"], "longitude": prev["lon"]},
@@ -125,7 +115,7 @@ def detect_fraud(record_str: str):
         if std > 0 and amount > stats_mean + STD_MULTIPLIER * std:
             reasons.append("amount_outlier")
 
-    # Zapisz jako ostatnią transakcję DLA TEJ KARTY (klucz = pełny card_id hex)
+    # Zapisz jako ostatnią transakcję
     last_tx[card_id] = {
         "card_id": card_id,
         "user_id": tx["user_id"],
@@ -155,9 +145,7 @@ def detect_fraud(record_str: str):
         yield json.dumps(alarm)
 
 
-# ============================================================================
 # PIPELINE FLINK
-# ============================================================================
 
 config = Configuration()
 config.set_string("pipeline.jars", JAR_PATH)
